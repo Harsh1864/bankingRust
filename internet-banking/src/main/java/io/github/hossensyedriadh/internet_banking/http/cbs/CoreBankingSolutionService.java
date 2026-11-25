@@ -1,0 +1,284 @@
+package io.github.hossensyedriadh.internet_banking.http.cbs;
+
+import io.github.hossensyedriadh.internet_banking.customer.model.PrincipalIdentityModel;
+import io.github.hossensyedriadh.internet_banking.customer.service.CustomerIdentityService;
+import io.github.hossensyedriadh.internet_banking.exception.CoreBankingCommunicationException;
+import io.github.hossensyedriadh.internet_banking.exception.CoreBankingException;
+import io.github.hossensyedriadh.internet_banking.exception.CoreBankingTransactionNotFoundException;
+import io.github.hossensyedriadh.internet_banking.http.cbs.model.*;
+import lombok.extern.log4j.Log4j2;
+import org.jspecify.annotations.NonNull;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
+
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+@Log4j2
+@Service
+public class CoreBankingSolutionService {
+    private final RestClient restClient;
+    private final CustomerIdentityService customerIdentityService;
+
+    @Autowired
+    public CoreBankingSolutionService(@Qualifier("gatewayRestClient") RestClient restClient, CustomerIdentityService customerIdentityService) {
+        this.restClient = restClient;
+        this.customerIdentityService = customerIdentityService;
+    }
+
+    public List<CbsAccountResponse> fetchBankAccounts() {
+        PrincipalIdentityModel principalIdentity = this.customerIdentityService.getPrincipal();
+        Long cbsCustomerId = principalIdentity.getCustomerIdentity().getCbsCustomerId();
+
+        try {
+            List<CbsAccountResponse> accounts = this.restClient.get().uri(uriBuilder -> uriBuilder.path("/accounts/customer/{customerId}/list")
+                            .build(cbsCustomerId))
+                    .retrieve().body(new ParameterizedTypeReference<>() {
+                    });
+
+            if (accounts == null) {
+                log.error("CBS/Gateway returned empty response for accounts information fetch for Customer [CBS Customer ID: {}]", cbsCustomerId);
+                throw new CoreBankingException("Failed to fetch account information");
+            }
+
+            return accounts;
+        } catch (RestClientResponseException e) {
+            log.error("CBS/Gateway returned HTTP {} while trying to fetch bank account mappings of CBS Customer [ID: {}]", e.getStatusCode().value(), cbsCustomerId, e);
+            throw new CoreBankingException("Failed to fetch bank accounts", HttpStatus.resolve(e.getStatusCode().value()), e);
+        } catch (RestClientException e) {
+            log.error("CBS/Gateway returned invalid response for bank account mappings of CBS Customer [ID: {}]", cbsCustomerId, e);
+            throw new CoreBankingCommunicationException("Failed to fetch bank accounts", e);
+        }
+    }
+
+    public CbsAccountResponse fetchAccountInfo(@NonNull Long accountId) {
+        try {
+            CbsAccountResponse accountResponse = this.restClient.get().uri(uriBuilder -> uriBuilder.path("/accounts/{id}")
+                            .build(accountId))
+                    .retrieve().body(CbsAccountResponse.class);
+
+            if (accountResponse == null) {
+                log.error("CBS/Gateway returned empty response for Account [ID: {}] information fetch", accountId);
+                throw new CoreBankingException("Failed to fetch account information");
+            }
+
+            return accountResponse;
+        } catch (RestClientResponseException e) {
+            log.error("CBS/Gateway returned HTTP {} while trying to fetch Account [ID: {}] information", e.getStatusCode().value(), accountId, e);
+            throw new CoreBankingException("Failed to fetch account information", HttpStatus.resolve(e.getStatusCode().value()), e);
+        } catch (RestClientException e) {
+            log.error("CBS/Gateway returned invalid response for Account [ID: {}] information fetch", accountId, e);
+            throw new CoreBankingCommunicationException("Failed to fetch account information", e);
+        }
+    }
+
+    public CbsAccountResponse fetchAccountInfo(@NonNull String accountNumber) {
+        try {
+            CbsAccountResponse accountResponse = this.restClient.get().uri(uriBuilder -> uriBuilder.path("/accounts/account-number/{number}")
+                            .build(accountNumber))
+                    .retrieve().body(CbsAccountResponse.class);
+
+            if (accountResponse == null) {
+                log.error("CBS/Gateway returned empty response for Account [Account Number: {}] information fetch", accountNumber);
+                throw new CoreBankingException("Failed to fetch account information");
+            }
+
+            return accountResponse;
+        } catch (RestClientResponseException e) {
+            log.error("CBS/Gateway returned HTTP {} while trying to fetch Account [Account Number: {}] information", e.getStatusCode().value(), accountNumber, e);
+            throw new CoreBankingException("Failed to fetch account information", HttpStatus.resolve(e.getStatusCode().value()), e);
+        } catch (RestClientException e) {
+            log.error("CBS/Gateway returned invalid response for Account [Account Number: {}] information fetch", accountNumber, e);
+            throw new CoreBankingCommunicationException("Failed to fetch account information", e);
+        }
+    }
+
+    public CbsAccountBalanceResponse fetchAccountBalance(@NonNull Long accountId) {
+        try {
+            CbsAccountBalanceResponse balanceResponse = this.restClient.get().uri(uriBuilder -> uriBuilder.path("/accounts/{accountId}/balance")
+                            .build(accountId))
+                    .retrieve().body(CbsAccountBalanceResponse.class);
+
+            if (balanceResponse == null) {
+                log.error("CBS/Gateway returned empty response for Account [ID: {}] balance fetch", accountId);
+                throw new CoreBankingException("Failed to fetch account balance");
+            }
+
+            return balanceResponse;
+        } catch (RestClientResponseException e) {
+            log.error("CBS/Gateway returned HTTP {} while trying to fetch Account Balance [Account ID: {}] information", e.getStatusCode().value(), accountId, e);
+            throw new CoreBankingException("Failed to fetch account balance", HttpStatus.resolve(e.getStatusCode().value()), e);
+        } catch (RestClientException e) {
+            log.error("CBS/Gateway returned invalid response for Account Balance [Account ID: {}] fetch", accountId, e);
+            throw new CoreBankingCommunicationException("Failed to fetch account balance", e);
+        }
+    }
+
+    public CbsAccountProductResponse fetchAccountProductInfo(@NonNull Long productId) {
+        try {
+            CbsAccountProductResponse productResponse = this.restClient.get().uri(uriBuilder -> uriBuilder.path("/account-products/{id}")
+                            .build(productId))
+                    .retrieve().body(CbsAccountProductResponse.class);
+
+            if (productResponse == null) {
+                log.error("CBS/Gateway returned empty response for Account Product [ID: {}] information fetch", productId);
+                throw new CoreBankingException("Failed to fetch account product information");
+            }
+
+            return productResponse;
+        } catch (RestClientResponseException e) {
+            log.error("CBS/Gateway returned HTTP {} while trying to fetch Account Product [ID: {}] information", e.getStatusCode().value(), productId, e);
+            throw new CoreBankingException("Failed to fetch account product information", HttpStatus.resolve(e.getStatusCode().value()), e);
+        } catch (RestClientException e) {
+            log.error("CBS/Gateway returned invalid response for Account Product [ID: {}] information fetch", productId, e);
+            throw new CoreBankingCommunicationException("Failed to fetch account product information", e);
+        }
+    }
+
+    public CbsCurrencyResponse fetchCurrencyInfo(@NonNull Long currencyId) {
+        try {
+            CbsCurrencyResponse currencyResponse = this.restClient.get().uri(uriBuilder -> uriBuilder.path("/currencies/{id}")
+                            .build(currencyId))
+                    .retrieve().body(CbsCurrencyResponse.class);
+
+            if (currencyResponse == null) {
+                log.error("CBS/Gateway returned empty response for Currency [ID: {}] information fetch", currencyId);
+                throw new CoreBankingException("Failed to fetch currency information");
+            }
+
+            return currencyResponse;
+        } catch (RestClientResponseException e) {
+            log.error("CBS/Gateway returned HTTP {} while trying to fetch Currency [ID: {}] information", e.getStatusCode().value(), currencyId, e);
+            throw new CoreBankingException("Failed to fetch currency information", HttpStatus.resolve(e.getStatusCode().value()), e);
+        } catch (RestClientException e) {
+            log.error("CBS/Gateway returned invalid response for Currency [ID: {}] information fetch", currencyId, e);
+            throw new CoreBankingCommunicationException("Failed to fetch currency information", e);
+        }
+    }
+
+    public CbsBranchResponse fetchBranchInfo(@NonNull Long branchId) {
+        try {
+            CbsBranchResponse branchResponse = this.restClient.get().uri(uriBuilder -> uriBuilder.path("/branches/{id}")
+                            .build(branchId))
+                    .retrieve().body(CbsBranchResponse.class);
+
+            if (branchResponse == null) {
+                log.error("CBS/Gateway returned empty response for Branch [ID: {}] information fetch", branchId);
+                throw new CoreBankingException("Failed to fetch branch information");
+            }
+
+            return branchResponse;
+        } catch (RestClientResponseException e) {
+            log.error("CBS/Gateway returned HTTP {} while trying to fetch Branch [ID: {}] information", e.getStatusCode().value(), branchId, e);
+            throw new CoreBankingException("Failed to fetch branch information", HttpStatus.resolve(e.getStatusCode().value()), e);
+        } catch (RestClientException e) {
+            log.error("CBS/Gateway returned invalid response for Branch [ID: {}] information fetch", branchId, e);
+            throw new CoreBankingCommunicationException("Failed to fetch branch information", e);
+        }
+    }
+
+    public CbsTransactionPage fetchTransactions(CbsTransactionsSearch search) {
+        try {
+            CbsTransactionPage response = this.restClient.get().uri(uriBuilder -> uriBuilder.path("/transactions")
+                            .queryParam("from", search.from().toString()).queryParam("to", search.to().toString())
+                            .queryParam("page", search.page()).queryParam("size", search.size())
+                            .queryParam("accountId", search.accountId())
+                            .queryParamIfPresent("type", Optional.ofNullable(search.type()))
+                            .queryParamIfPresent("status", Optional.ofNullable(search.status()))
+                            .build())
+                    .retrieve().body(CbsTransactionPage.class);
+
+            if (response == null || response.getContent() == null) {
+                log.error("CBS/Gateway returned an empty transactions response");
+                throw new CoreBankingException("CBS/Gateway returned an empty transactions response");
+            }
+
+            return response;
+        } catch (RestClientResponseException e) {
+            log.error("CBS/Gateway returned HTTP {} while trying to fetch transactions", e.getStatusCode().value(), e);
+            throw new CoreBankingException("Failed to fetch transactions", HttpStatus.resolve(e.getStatusCode().value()), e);
+        } catch (RestClientException e) {
+            log.error("CBS/Gateway returned invalid response for transactions fetch", e);
+            throw new CoreBankingCommunicationException("Failed to fetch transactions", e);
+        }
+    }
+
+    public CbsTransactionResponse fetchTransaction(Long id) {
+        try {
+            CbsTransactionResponse response = this.restClient.get().uri(uriBuilder -> uriBuilder.path("/transactions/{id}")
+                            .build(id))
+                    .retrieve().body(CbsTransactionResponse.class);
+
+            if (response == null) {
+                log.error("CBS/Gateway returned an empty transaction response");
+                throw new CoreBankingException("CBS/Gateway returned an empty transaction response");
+            }
+
+            return response;
+        } catch (RestClientResponseException e) {
+            log.error("CBS/Gateway returned HTTP {} while trying to fetch transaction [ID: {}]", e.getStatusCode().value(), id, e);
+            throw new CoreBankingException("Failed to fetch transaction", HttpStatus.resolve(e.getStatusCode().value()), e);
+        } catch (RestClientException e) {
+            log.error("CBS/Gateway returned invalid response for transaction [ID: {}] fetch", id, e);
+            throw new CoreBankingCommunicationException("Failed to fetch transaction", e);
+        }
+    }
+
+    public CbsTransactionResponse fetchTransaction(UUID idempotencyKey, Long accountId) {
+        try {
+            CbsTransactionResponse response = this.restClient.get().uri(uriBuilder -> uriBuilder
+                            .path("/transactions/idempotency/{idempotencyKey}")
+                            .queryParam("accountId", accountId)
+                            .build(idempotencyKey))
+                    .retrieve().body(CbsTransactionResponse.class);
+
+            if (response == null) {
+                log.error("CBS/Gateway returned an empty transaction response");
+                throw new CoreBankingException("CBS/Gateway returned an empty transaction response");
+            }
+
+            return response;
+        } catch (RestClientResponseException e) {
+            if (e.getStatusCode().value() == 404) {
+                log.warn("CBS transaction not found [Idempotency Key: {}, Account ID: {}]", idempotencyKey, accountId);
+                throw new CoreBankingTransactionNotFoundException("CBS transaction not found", e);
+            }
+
+            log.error("CBS/Gateway returned HTTP {} while trying to fetch transaction [Idempotency Key: {}, Account ID: {}]", e.getStatusCode().value(), idempotencyKey, accountId, e);
+            throw new CoreBankingException("Failed to fetch transaction", HttpStatus.resolve(e.getStatusCode().value()), e);
+        } catch (RestClientException e) {
+            log.error("CBS/Gateway returned invalid response for transaction [Idempotency Key: {}, Account ID: {}] fetch",
+                    idempotencyKey.toString(), accountId, e);
+            throw new CoreBankingCommunicationException("Failed to fetch transaction", e);
+        }
+    }
+
+    public CbsTransactionResponse fundTransfer(CbsFundTransferRequest fundTransferRequest) {
+        try {
+            CbsTransactionResponse response = this.restClient.post().uri("/transactions/transfers")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(fundTransferRequest).retrieve().body(CbsTransactionResponse.class);
+
+            if (response == null) {
+                log.error("CBS/Gateway returned an empty fund transfer response");
+                throw new CoreBankingException("CBS/Gateway returned an empty fund transfer response");
+            }
+
+            return response;
+        } catch (RestClientResponseException e) {
+            log.error("CBS/Gateway returned HTTP {} while trying to create fund transfer request", e.getStatusCode().value(), e);
+            throw new CoreBankingException("Failed to transfer funds", HttpStatus.resolve(e.getStatusCode().value()), e);
+        } catch (RestClientException e) {
+            log.error("CBS/Gateway returned invalid response for fund transfer", e);
+            throw new CoreBankingCommunicationException("Failed to transfer funds", e);
+        }
+    }
+}
