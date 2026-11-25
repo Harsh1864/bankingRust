@@ -1,0 +1,26 @@
+spring:
+  main:
+    web-application-type: NONE
+  lifecycle:
+    timeout-per-shutdown-phase: 20s
+
+#custom properties
+atm:
+  terminal-id: "${ATM_TERMINAL_ID}"
+  timezone: "${ATM_TIMEZONE_IANA}"
+  health-check-server:
+    port: "${ATM_HEALTH_CHECK_SERVER_PORT:8080}"
+  tcp-server:
+    port: "${ATM_TCP_SERVER_PORT:2323}"
+  switch-config:
+    host: "${ATM_SWITCH_TCP_HOST}"
+    port: "${ATM_SWITCH_TCP_PORT}"
+    connect-timeout: "${ATM_SWITCH_CONNECT_TIMEOUT:30000}"
+    read-timeout: "${ATM_SWITCH_READ_TIMEOUT:30000}"
+  security:
+    pin-block:
+      encryption-secret-key: "${ATM_SECURITY_PIN_BLOCK_ENCRYPTION_SECRET_KEY}"
+  terminal:
+    session:
+      idle-timeout: "${ATM_TERMINAL_SESSION_IDLE_TIMEOUT:2m}"
+      max-duration: "${ATM_TERMINAL_SESSION_MAX_DURATION:5m}"

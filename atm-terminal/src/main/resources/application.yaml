@@ -1,0 +1,20 @@
+spring:
+  application:
+    name: "atm-terminal"
+  profiles:
+    active: "${SPRING_PROFILES_ACTIVE:dev}"
+  threads:
+    virtual:
+      enabled: true
+  main:
+    keep-alive: true
+    web-application-type: NONE
+  web:
+    error:
+      whitelabel:
+        enabled: false
+      include-binding-errors: on_param
+      include-exception: false
+      include-stacktrace: never
+      include-message: always
+      include-path: always
