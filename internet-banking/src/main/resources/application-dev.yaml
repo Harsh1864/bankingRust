@@ -1,0 +1,118 @@
+spring:
+  datasource:
+    driver-class-name: "org.postgresql.Driver"
+    url: "${POSTGRES_URL}"
+    username: "${POSTGRES_USER}"
+    password: "${POSTGRES_PWD}"
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX_SIZE}
+      minimum-idle: ${DB_POOL_MIN_IDLE}
+      idle-timeout: ${DB_POOL_IDLE_TIMEOUT}
+      connection-timeout: ${DB_POOL_CONN_TIMEOUT}
+      max-lifetime: ${DB_POOL_MAX_LIFETIME}
+      leak-detection-threshold: ${DB_POOL_LEAK_THRESHOLD}
+      connection-test-query: "select 1;"
+      driver-class-name: "org.postgresql.Driver"
+      pool-name: "Hikari Connection Pool [Internet Banking: Dev]"
+  jpa:
+    properties:
+      hibernate:
+        show_sql: true
+        format_sql: true
+  data:
+    web:
+      pageable:
+        max-page-size: 24
+        default-page-size: 10
+    redis:
+      host: "${REDIS_HOST}"
+      port: ${REDIS_PORT}
+      username: "${REDIS_USER}"
+      password: "${REDIS_PWD}"
+      timeout: ${REDIS_READ_TIMEOUT}
+      connect-timeout: ${REDIS_CONN_TIMEOUT}
+      ssl:
+        enabled: true
+      repositories:
+        enabled: false
+      database: 4
+      lettuce:
+        pool:
+          enabled: true
+          max-active: ${REDIS_POOL_MAX_ACTIVE}
+          max-idle: ${REDIS_POOL_MAX_IDLE}
+          min-idle: ${REDIS_POOL_MIN_IDLE}
+          time-between-eviction-runs: "${REDIS_POOL_EVICTION_RUNTIME}"
+          max-wait: "${REDIS_POOL_MAX_WAIT}"
+      client-type: lettuce
+      client-name: "internet-banking"
+  session:
+    jdbc:
+      initialize-schema: NEVER
+      table-name: core.spring_session
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: "${BANKING_IAM_SERVER_ISSUER_URI}"
+      client:
+        registration:
+          internet-banking:
+            provider: "banking-iam-server"
+            client-id: "${IBANKING_CLIENT_ID}"
+            client-secret: "${IBANKING_CLIENT_SECRET}"
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            client-name: "Internet Banking"
+            scope: [openid, profile, email, phone, offline_access, ibanking.balance.read, ibanking.branch-info.read, ibanking.account-info.list, ibanking.account-info.read, ibanking.card-info.read, ibanking.card-pin.verify, ibanking.currency-info.read, ibanking.account-product-info.read, ibanking.transfer.create, ibanking.transactions-search.read, ibanking.transaction.read]
+          internet-banking-service:
+            provider: "banking-iam-server"
+            client-id: "${IBANKING_SERVICE_CLIENT_ID}"
+            client-secret: "${IBANKING_SERVICE_CLIENT_SECRET}"
+            authorization-grant-type: client_credentials
+            client-name: "Internet Banking Service"
+            scope: [ibanking.account-info.read, ibanking.transaction.read, ibanking.transfer.create]
+        provider:
+          banking-iam-server:
+            issuer-uri: "${BANKING_IAM_SERVER_ISSUER_URI}"
+logging:
+  level:
+    org.springframework.security: info
+    org.springframework.security.oauth2: info
+    org.springframework.web: info
+server:
+  servlet:
+    session:
+      cookie:
+        name: "IBSESSIONID"
+        http-only: true
+  tomcat:
+    connection-timeout: 15s
+    keep-alive-timeout: 30s
+  shutdown: GRACEFUL
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "info,health"
+  endpoint:
+    health:
+      show-details: always
+springdoc:
+  api-docs:
+    enabled: true
+  swagger-ui:
+    enabled: true
+
+#custom properties
+core-banking:
+  api-gateway:
+    base-url: "${CBS_APIGW_BASE_URL}"
+security:
+  oauth2:
+    token-encryption-key: ${OAUTH2_TOKEN_ENCRYPTION_KEY}
+ibanking:
+  transaction:
+    reconciliation:
+      fixed-delay: "${TRANSACTION_RECONCILIATION_FIXED_DELAY}"
+      initial-delay: "${TRANSACTION_RECONCILIATION_INIT_DELAY}"
